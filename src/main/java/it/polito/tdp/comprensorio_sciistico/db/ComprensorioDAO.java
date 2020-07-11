@@ -33,7 +33,7 @@ public List<Pista> caricaPiste() {
 			while( rs.next() ) {
 				
 				Pista pista = new Pista(rs.getInt("id"), rs.getString("nome"), rs.getString("stazione_monte"),
-				rs.getString("stazione_valle"), rs.getString("colore"),rs.getInt("lunghezza"), rs.getString("localita"));
+				rs.getString("stazione_valle"), rs.getString("colore"),rs.getInt("lunghezza"), rs.getString("localita"), "Pista");
 				
 				risultato.add(pista);
 				
@@ -78,7 +78,7 @@ public List<Impianto> caricaImpianti() {
 			}
 			
 			Impianto impianto = new Impianto(rs.getInt("id"), rs.getString("nome"), rs.getString("stazione_monte"),
-					rs.getString("stazione_valle"), rs.getString("localita"),rs.getString("tipo"), iniziale,rs.getInt("posti"),rs.getDouble("tempo_risalita"), rs.getDouble("intervallo"), rs.getTime("h_apertura").toLocalTime(), rs.getTime("h_chiusura").toLocalTime());
+					rs.getString("stazione_valle"), rs.getString("localita"),rs.getString("tipo"), iniziale,rs.getInt("posti"),rs.getDouble("tempo_risalita"), rs.getDouble("intervallo"), rs.getTime("h_apertura").toLocalTime(), rs.getTime("h_chiusura").toLocalTime(),"Impianto");
 			
 			risultato.add(impianto);
 			

@@ -32,6 +32,10 @@ public class Model {
 	double punteggioMax;
 	Stazione partenzaRicorsivo;
 	Stazione arrivoRicorsivo;
+	int numeroUtenti;
+	
+	
+	
 	
 	public Model() {
 		idMap= new HashMap<>();
@@ -219,17 +223,21 @@ public class Model {
 		
 	}
 	
-	public List<Tratta> trovaMassimoPercorso(Livello livello, int tempoMax, Stazione partenza, Stazione arrivo){
+	public List<Tratta> trovaMassimoPercorso(Livello livello, int numeroUtenti, int tempoMax, Impianto partenza, Impianto arrivo){
 		
 		List<Tratta> parziale = new ArrayList<>();
 		
-		partenzaRicorsivo = partenza;
-		arrivoRicorsivo = arrivo;
+		partenzaRicorsivo = idMap.get(partenza.getIdValle());
+		arrivoRicorsivo = idMap.get(arrivo.getIdValle());
+		this.numeroUtenti = numeroUtenti;
 		
+		parziale.add(partenza);
+				
 		bestSoluzione = new ArrayList<>();
 		punteggioMax = Double.MIN_VALUE;
 		
-		cercaRicorsivo(parziale, tempoMax);
+		double tempoIniziale=  partenza.getTempoRisalita()+partenza.getIntervallo()*(Math.ceil(numeroUtenti/partenza.getPosti()));
+		cercaRicorsivo(parziale, tempoMax,tempoIniziale, partenzaRicorsivo);
 		
 		
 		return bestSoluzione;
@@ -237,9 +245,88 @@ public class Model {
 	
 	
 
-	private void cercaRicorsivo(List<Tratta> parziale, int tempoMax) {
-		// TODO Auto-generated method stub
+	private void cercaRicorsivo(List<Tratta> parziale, int tempoMax, double tempo, Stazione ultimaInserita) {
+
+
+		if(tempo>tempoMax) {
+			
+			parziale.remove(parziale.size()-1);
+			Tratta ultimaTratta = (parziale.get(parziale.size()-1));
+			Stazione arrivo = null;
+			if(ultimaTratta.getTipo().equals("Pista")) {
+				arrivo = idMap.get(((Pista)ultimaTratta).getIdValle());
+	
+			}else {
+				arrivo = idMap.get(((Impianto)ultimaTratta).getIdValle());
+				
+			}
+			if(arrivo.equals(arrivoRicorsivo)) {
+				double punteggio = calcolaPunteggio(parziale);
+				if(punteggio>punteggioMax) {
+					punteggioMax = punteggio;
+					bestSoluzione = new ArrayList<>(parziale);
+					return;
+				}
+			}
+			return;
+			
+		}else {
+			
+			for(Stazione prossimo: Graphs.neighborListOf(this.grafo, ultimaInserita)) {
+				
+				String chiave = ""+ultimaInserita.getCodice()+"-"+prossimo.getCodice();
+				
+				if(mappaImpianti.containsKey(chiave)) {
+					//aggiungo impianto
+					Impianto i = mappaImpianti.get(chiave);
+					parziale.add(i);
+					
+					double tempoImpianto = (i.getTempoRisalita() + i.getIntervallo()*(Math.ceil(this.numeroUtenti/i.getPosti())));
+					tempo+=tempoImpianto;
+					//ricorsivo
+					cercaRicorsivo(parziale, tempoMax, tempo, prossimo);
+					//backtracking
+					tempo-=tempoImpianto;
+					parziale.remove(parziale.size()-1);
+					
+				}else if(mappaPiste.containsKey(chiave)) {
+					
+					List<Pista> lista = mappaPiste.get(chiave);
+					for(Pista p: lista) {
+						
+						parziale.add(p);
+						double tempoPista= this.grafo.getEdgeWeight(this.grafo.getEdge(ultimaInserita, prossimo));
+						tempo+=tempoPista;
+						
+						cercaRicorsivo(parziale, tempoMax, tempo, prossimo);
+						
+						//backtracking
+						tempo-=tempoPista;
+						parziale.remove(parziale.size()-1);
+						
+					}
+				}
+			}
+			
+		}
 		
+	}
+
+	private double calcolaPunteggio(List<Tratta> parziale) {
+		
+		Map<Integer, Integer>ripetizioni = new HashMap<>();
+		
+		for(Tratta tratta: parziale) {
+			if(tratta.getTipo().equals("Pista")) {
+				Pista pista = (Pista)tratta;
+				if(!ripetizioni.containsKey(pista.getId()))
+					ripetizioni.put(pista.getId(), 1);
+				else
+					ripetizioni.get(pista.getId())+1;
+			}
+		}
+		
+		return 0;
 	}
 
 	public String stampa() {
@@ -311,7 +398,7 @@ public class Model {
 		
 	}
 	
-	public Set<String> getLocatita(){
+	public Set<String> getLocalita(){
 		
 		Set<String> localita = new HashSet<>();
 		for(Impianto i: mappaImpianti.values()) {
