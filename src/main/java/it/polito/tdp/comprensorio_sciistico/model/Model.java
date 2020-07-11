@@ -322,7 +322,7 @@ public class Model {
 				if(!ripetizioni.containsKey(pista.getId()))
 					ripetizioni.put(pista.getId(), 1);
 				else
-					ripetizioni.get(pista.getId())+1;
+					ripetizioni.get(pista.getId());
 			}
 		}
 		
