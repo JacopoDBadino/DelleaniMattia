@@ -85,8 +85,7 @@ public class Impianto extends Tratta{
 	}
 	@Override
 	public String toString() {
-		return ""+ nome +"("+Math.ceil(this.tempoRisalita)+"min), " + localita + " " + tipologia
-				+ "[" + posti + "]";
+		return ""+ nome  + " (" + tipologia+")";
 	}
 	
 	

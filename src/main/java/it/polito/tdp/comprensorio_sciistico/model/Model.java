@@ -37,7 +37,7 @@ public class Model {
 	double tempoMax;
 	public double tempoBest;
 	
-	
+	double tempoMinimo;
 	
 	
 	public Model() {
@@ -62,62 +62,71 @@ public class Model {
 				String chiave = ""+i.getIdValle()+"-"+i.getIdMonte();
 				mappaImpianti.put(chiave, i);
 				
-				Graphs.addEdgeWithVertices(this.grafo, idMap.get(i.getIdValle()), idMap.get(i.getIdMonte()), i.getTempoRisalita()*60);
+				Graphs.addEdgeWithVertices(this.grafo, idMap.get(i.getIdValle()), idMap.get(i.getIdMonte()), i.getTempoRisalita());
 			}
 			
 		}
-		 impiantiDiscesa = dao.listaImpiantiDiscesa(mappaImpianti);
-		System.out.println("IMPIANTI: "+mappaImpianti.size()+"\nDiscesa: "+impiantiDiscesa.size());
+		impiantiDiscesa = dao.listaImpiantiDiscesa(mappaImpianti);
+		System.out.println("\nIMPIANTI: "+mappaImpianti.size()+"\nDiscesa: "+impiantiDiscesa.size());
 		
 		caricaPiste(livello);
 	
 		
 		
-		//System.out.println("PISTE: "+ mappaPiste.size());
+		System.out.println("PISTE: "+ mappaPiste.size());
 		System.out.println("NUMERO VERTCI: "+ this.grafo.vertexSet().size());
 		System.out.println("NUMERO ARCHI: "+ this.grafo.edgeSet().size());
 		
 	}
 	
 	
-	public String camminiMinimo(Impianto inizio, Impianto fine) {
+	public List<Tratta> camminiMinimo(Impianto inizio, Impianto fine, int numeroUtenti) {
 		
-		Stazione partenza = idMap.get(inizio.getIdValle());
+		this.tempoMinimo = 0.0;
+		List<Tratta> soluzione = new ArrayList<>();
+		
+		Stazione partenza = idMap.get(inizio.getIdMonte());
 		Stazione arrivo = idMap.get(fine.getIdValle());
-		System.out.println(partenza.getCodice()+"   "+arrivo.getCodice());
 		DijkstraShortestPath<Stazione, DefaultWeightedEdge> dij = new DijkstraShortestPath<Stazione, DefaultWeightedEdge>(this.grafo);
 
 		GraphPath<Stazione, DefaultWeightedEdge> cammino = dij.getPath(partenza, arrivo);
-		System.out.println("CAMMINO "+ cammino.getVertexList().size());
-		double tempo= dij.getPathWeight(partenza, arrivo);
-		
-		String result = "Cammino minimo con durata "+Math.ceil(tempo/60)+" minuti. Partenza: "+ inizio.getLocalita() +" ("+inizio.getNome()+") - Arrivo: " + fine.getLocalita() +" ("+fine.getNome()+")";
-		result +="\nPercorso:";
-
-		for(int i = 0; i< cammino.getVertexList().size()-1; i++) {
-			
-			String chiave = cammino.getVertexList().get(i).getCodice()+"-"+cammino.getVertexList().get(i+1).getCodice();
-			
-			if(mappaPiste.containsKey(chiave)) {
-				//mi da una lista, devo vedere il prossimo vertice e scegliere la pista giusta
-				List<Pista> lista = new ArrayList<>( mappaPiste.get(chiave));
-				Collections.sort(lista, new Comparator<Pista>() {
-
-					@Override
-					public int compare(Pista o1, Pista o2) {
-						// TODO Auto-generated method stub
-						return -(int)(o1.getTempoPercorrenza()-o2.getTempoPercorrenza());
-					}
+		if(cammino!=null) {
+			//Aggiungo il primo impianto, perchè selezionato da input e faccio il minimo cammino dalla stazione
+			//di monte
+			soluzione.add(inizio);
+			this.tempoMinimo = inizio.getTempoRisalita() + Math.ceil(numeroUtenti/inizio.getPosti())*(inizio.getIntervallo()*60);
+			for(int i = 0; i< cammino.getVertexList().size()-1; i++) {
+				
+				String chiave = cammino.getVertexList().get(i).getCodice()+"-"+cammino.getVertexList().get(i+1).getCodice();
+				
+				if(mappaPiste.containsKey(chiave)) {
+					//mi da una lista, devo vedere il prossimo vertice e scegliere la pista giusta
+					List<Pista> lista = new ArrayList<>( mappaPiste.get(chiave));
+					Collections.sort(lista, new Comparator<Pista>() {
+	
+						@Override
+						public int compare(Pista o1, Pista o2) {
+							// TODO Auto-generated method stub
+							return -(int)(o1.getTempoPercorrenza()-o2.getTempoPercorrenza());
+						}
+						
+					});		
 					
-				});		
-				result+="\nPista: "+lista.get(0).toString();
-			}else {
-				result+="\nImpianto: "+ mappaImpianti.get(chiave).toString();
-			}
+					tempoMinimo+= lista.get(0).getTempoPercorrenza();
+					soluzione.add(lista.get(0));
+				}else {
+					
+					Impianto impianto = mappaImpianti.get(chiave);
+					
+					tempoMinimo+= impianto.getTempoRisalita() + Math.ceil(numeroUtenti/impianto.getPosti())*(impianto.getIntervallo()*60);
+							
+					soluzione.add(mappaImpianti.get(chiave));
+				}
 			
-		}
+			}
+		}	
 		
-		return result;
+		return soluzione;
 		
 	}
 	
@@ -137,8 +146,9 @@ public class Model {
 						mappaPiste.put(chiave, lista);
 						
 					}else {
+						
 						mappaPiste.get(chiave).add(p);
-				
+						
 					}
 					
 					double tempo =0;
@@ -308,7 +318,7 @@ public class Model {
 					if(!parziale.contains(i)) {
 						parziale.add(i);
 						
-						double tempoImpianto = (i.getTempoRisalita() + i.getIntervallo()*(Math.ceil(this.numeroUtenti/i.getPosti())))*60;
+						double tempoImpianto = i.getTempoRisalita() + (i.getIntervallo()*(Math.ceil(this.numeroUtenti/i.getPosti())))*60;
 						tempo+=tempoImpianto;
 						//ricorsivo
 						cercaRicorsivo(parziale, tempoMax, tempo, prossimo, livello);
@@ -617,6 +627,29 @@ public class Model {
 		
 	}
 	
+	public List<Impianto> getImpiantiPerLocalita(String localita){
+		
+		
+List<Impianto> lista = new ArrayList<>();
+		
+		for(Impianto i: mappaImpianti.values()) {
+			if(i.getLocalita().equals(localita)) {
+				lista.add(i);
+			}
+		}
+		
+		Collections.sort(lista, new Comparator<Impianto>(){
+
+			@Override
+			public int compare(Impianto o1, Impianto o2) {
+				// TODO Auto-generated method stub
+				return o1.getNome().compareTo(o2.getNome());
+			}	
+		});
+		
+		return lista;
+	}
+	
 	public Set<String> getLocalita(){
 		
 		Set<String> localita = new HashSet<>();
@@ -633,6 +666,12 @@ public class Model {
 	public Map<String, Stazione> getIdMap() {
 		return idMap;
 	}
+
+	public double getTempoMinimo() {
+		return tempoMinimo;
+	}
+	
+	
 	
 	
 

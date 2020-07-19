@@ -15,6 +15,13 @@ public class Livello {
 	public String getLivello() {
 		return livello;
 	}
+
+	@Override
+	public String toString() {
+		return ""+ this.livello.toUpperCase();
+	}
+	
+	
 	
 	
 

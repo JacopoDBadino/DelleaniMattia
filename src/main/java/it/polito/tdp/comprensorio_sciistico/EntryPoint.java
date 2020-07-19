@@ -18,11 +18,12 @@ public class EntryPoint extends Application {
     	Parent root = loader.load();
         Scene scene = new Scene(root);
          
-        Model model = new Model();
+        //Model model = new Model();
         FXMLController controller = loader.getController();
-        controller.setModel(model);
+       // controller.setModel(model);
+        controller.setStage(stage);
         
-        stage.setTitle("DenverCrimes");
+        stage.setTitle("CalcolaPercorsi");
         stage.setScene(scene);
         stage.show();
     }
