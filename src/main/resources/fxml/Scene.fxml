@@ -35,7 +35,7 @@
                         <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
                      </HBox.margin>
                   </Button>
-                  <Button fx:id="btnCamminoMinimo" mnemonicParsing="false" onAction="#doCamminoMinimo" text="Calcola percorso piu veloce">
+                  <Button fx:id="btnCamminoMinimo" mnemonicParsing="false" onAction="#doCamminoMinimo" text="Calcola percorso più veloce">
                      <HBox.margin>
                         <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
                      </HBox.margin>

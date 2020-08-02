@@ -38,7 +38,6 @@ public class MinimoFXMLController {
 	private Model model;
 	private Stage stage;
 
-	private boolean livelloSelezionato = false;
     @FXML // ResourceBundle that was given to the FXMLLoader
     private ResourceBundle resources;
 
@@ -56,6 +55,12 @@ public class MinimoFXMLController {
 
     @FXML // fx:id="boxImpiantoPartenza"
     private ComboBox<Impianto> boxImpiantoPartenza; // Value injected by FXMLLoader
+    
+    @FXML
+    private RadioButton btnRadioStazionePartenza;
+
+    @FXML
+    private RadioButton btnRadioStazioneArrivo;
 
     @FXML // fx:id="boxLoaclitaArrivo"
     private ComboBox<String> boxLocalitaArrivo; // Value injected by FXMLLoader
@@ -82,26 +87,14 @@ public class MinimoFXMLController {
 
     @FXML
     private RadioButton btnRadioArrivo;
-
     
-    /*
-    
-    @FXML
-    private TableColumn<TrattaTabella, String> colonnaTratta;
-
-    @FXML
-    private TableColumn<TrattaTabella, String> colonnaNome;
-
-    @FXML
-    private TableColumn<TrattaTabella, String> colonnaLocalita;
-
-    @FXML
-    private TableColumn<TrattaTabella, String> colonnaTempo;
-    */
     
     @FXML
     void doCostruisciGrafo(ActionEvent event) {
-    	//this.clearAll();
+    	
+    	tableResult.getItems().clear();
+    	
+    	
     	txtRisultato.clear();
     	txtErrore.setText("");
     	boxLocalitaArrivo.getItems().clear();
@@ -109,20 +102,21 @@ public class MinimoFXMLController {
     	boxImpiantoArrivo.getItems().clear();
     	boxImpiantoPartenza.getItems().clear();
     	
-    	//tableResult.getItems().clear();
     	Livello livello = boxLivello.getValue();
     	if(livello==null) {
     		txtErrore.setText("Selezionare un livello");
     	}else {
     		
     		this.model.creaGrafo(livello);
+    		
     		boxLocalitaPartenza.getItems().addAll(this.model.getLocalita());
         	boxLocalitaArrivo.getItems().addAll(this.model.getLocalita());
-        	livelloSelezionato = true;
-    		
+        	
+        	boxLocalitaArrivo.setDisable(false);
+        	boxLocalitaPartenza.setDisable(false);
+ 
     	}
 
-    	
     }
     
     @FXML
@@ -153,28 +147,43 @@ public class MinimoFXMLController {
     
     @FXML
     void doSceltaPartenza(ActionEvent event) {
-    	boxImpiantoPartenza.getItems().clear();
-    	boxImpiantoPartenza.getItems().addAll(this.model.getImpiantiPerLocalita(boxLocalitaPartenza.getValue()));
-
+    	
+    	btnRadioPartenza.setDisable(false);
+    	btnRadioStazionePartenza.setDisable(false);
+    	boxImpiantoPartenza.setDisable(false);
+    	if(btnRadioPartenza.isSelected()){
+	    	boxImpiantoPartenza.getItems().clear();
+	    	boxImpiantoPartenza.getItems().addAll(this.model.getImpiantiIniziali(boxLocalitaPartenza.getValue()));
+	    }else {
+	    	boxImpiantoPartenza.getItems().clear();
+	    	boxImpiantoPartenza.getItems().addAll(this.model.getImpiantiPerLocalita(boxLocalitaPartenza.getValue()));
+	    }
     }
 
     @FXML
     void doSceltoArrivo(ActionEvent event) {
-    	boxImpiantoArrivo.getItems().clear();
-    	boxImpiantoArrivo.getItems().addAll(this.model.getImpiantiPerLocalita(boxLocalitaArrivo.getValue()));
-
+    	
+    	boxImpiantoArrivo.setDisable(false);
+    	btnRadioStazioneArrivo.setDisable(false);
+    	btnRadioArrivo.setDisable(false);
+    	if(btnRadioArrivo.isSelected()){
+	    	boxImpiantoArrivo.getItems().clear();
+	    	boxImpiantoArrivo.getItems().addAll(this.model.getImpiantiIniziali(boxLocalitaArrivo.getValue()));
+    	}else {
+	    	boxImpiantoArrivo.getItems().clear();
+	    	boxImpiantoArrivo.getItems().addAll(this.model.getImpiantiPerLocalita(boxLocalitaArrivo.getValue()));
+    	}
     }
 
     @FXML
     void doCalcolaPercorsoMinimo(ActionEvent event) {
     	tableResult.getItems().clear();
-    	if(livelloSelezionato) {
+    	if(boxLivello.getValue()!=null) {
     	
 	    	Integer numeroUtenti = -1;
 	    	boolean corretto = false;
 	    	
 	    	try {
-	    		
 	    		numeroUtenti = Integer.parseInt(txtNumeroPartecipanti.getText());
 	    		corretto = true;
 	    		
@@ -196,8 +205,6 @@ public class MinimoFXMLController {
 			    	}else if(localitaArrivo==null) {
 			    		txtErrore.setText("Introdurre una localita di arrivo.");
 			    	}else {
-			    		boxImpiantoPartenza.getItems().addAll(this.model.getImpiantiIniziali(localitaPartenza));
-			    		boxImpiantoArrivo.getItems().addAll(this.model.getImpiantiIniziali(localitaArrivo));
 			    		
 			    		impiantoPartenza = boxImpiantoPartenza.getValue();
 			    		impiantoArrivo = boxImpiantoArrivo.getValue();
@@ -210,43 +217,44 @@ public class MinimoFXMLController {
 				    	
 				    		txtErrore.setText("");
 				    		
-				    		//STAMPA RESULT
 				    		ObservableList<TrattaTabella> risultato = FXCollections.observableArrayList();
-				    		double tempo = 0.0;
-				    		List<Tratta> soluzione = this.model.camminiMinimo(impiantoPartenza, impiantoArrivo, numeroUtenti);
-				    		System.out.println("SOLUZIONM "+  soluzione.size()+"  "+ soluzione.toString());
+				    		String idStazionePartenza ="";
+				    		String idStazioneArrivo = "";
+				    		if(btnRadioStazionePartenza.isSelected()) {
+				    			idStazionePartenza =impiantoPartenza.getIdValle();
+				    		}else {
+				    			idStazionePartenza = impiantoPartenza.getIdMonte();
+				    		}
+				    		
+				    		if(btnRadioStazioneArrivo.isSelected()) {
+				    			idStazioneArrivo = impiantoArrivo.getIdValle();
+				    		}else {
+				    			idStazioneArrivo = impiantoArrivo.getIdMonte();
+				    		}
+				    		List<Tratta> soluzione = this.model.camminoMinimo(idStazionePartenza, idStazioneArrivo, numeroUtenti);
 				    		if(soluzione.size()!=0) {
 					    		for(Tratta t: soluzione ) {
 					    			
 					    			if(t.getTipo().equals("Pista")) {
 					    				Pista p = (Pista)t;
 					    				String tratta ="Pista";
-					    				tempo+=p.getTempoPercorrenza();
-					    				System.out.println(p.getTempoPercorrenza());
-					    				risultato.add(new TrattaTabella(tratta,p.getColore(), p.getNome(), p.getLocalita(), convertiTempo(p.getTempoPercorrenza())));
+					    				risultato.add(new TrattaTabella(tratta,p.getColore(), p.getNome(), p.getLocalita(), this.model.convertiTempoInStringa(p.getTempoPercorrenza())));
 					    			}else {
 					    				Impianto i = (Impianto)t;
 					    				double secondi = i.getTempoRisalita();
-					    				tempo+= secondi;
-					    				System.out.println(secondi);
 					    				String tratta = "Impianto";
-					    				risultato.add(new TrattaTabella(tratta, i.getTipologia(), i.getNome(), i.getLocalita(), convertiTempo(secondi)));
+					    				risultato.add(new TrattaTabella(tratta, i.getTipologia(), i.getNome(), i.getLocalita(), this.model.convertiTempoInStringa(secondi)));
 	
-					    				
 					    			}
 					    		}
 					    		tableResult.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 					    		tableResult.setItems(risultato);
-					    		
-					    		System.out.println("RIS "+ this.model.getTempoMinimo()+" misurati: " +tempo );
-					    		//txtRisultato.setText(convertiTempo(this.model.getTempoMinimo())); NON FUNZIONA CE UNO SCARTO DI SECONDI USANDO DIJK GET WEIGHT
-					    		txtRisultato.setText(convertiTempo(this.model.getTempoMinimo()));
+					    		txtRisultato.setText(this.model.convertiTempoInStringa(this.model.getTempoMinimo()));
 				    		}else {
 				    			
 				    			txtErrore.setText("Per il livello selezionato non è possibile determinare un percorso tra i due impianti");
 				    		}
-				    		
-				    		
+					
 				    	}
 			    	}
 		    	}else {
@@ -275,7 +283,6 @@ public class MinimoFXMLController {
     			
     			Scene scene = new Scene(root);
     			
-    			//scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
     			stage.setScene(scene);
     			stage.show();
     			
@@ -289,7 +296,7 @@ public class MinimoFXMLController {
     @FXML // This method is called by the FXMLLoader when initialization is complete
     void initialize() {
         assert txtNumeroPartecipanti != null : "fx:id=\"txtNumeroPartecipanti\" was not injected: check your FXML file 'CamminoMinimoScene.fxml'.";
-        assert boxLivello != null : "fx:id=\"boxLivello\" was not injected: check your FXML file 'CamminoMinimoScene.fxml'.";
+        assert boxLivello != null : "fx:id=\"boxLivello\" was not injected: check your FXML file 'CamminoMassimoScene.fxml'.";
         assert boxLocalitaPartenza != null : "fx:id=\"boxLocalitaPartenza\" was not injected: check your FXML file 'CamminoMinimoScene.fxml'.";
         assert boxImpiantoPartenza != null : "fx:id=\"boxImpiantoPartenza\" was not injected: check your FXML file 'CamminoMinimoScene.fxml'.";
         assert boxLocalitaArrivo != null : "fx:id=\"boxLoaclitaArrivo\" was not injected: check your FXML file 'CamminoMinimoScene.fxml'.";
@@ -300,12 +307,10 @@ public class MinimoFXMLController {
         assert btnIndietro != null : "fx:id=\"btnIndietro\" was not injected: check your FXML file 'CamminoMinimoScene.fxml'.";
         assert btnRadioPartenza != null : "fx:id=\"btnRadioPartenza\" was not injected: check your FXML file 'CamminoMinimoScene.fxml'.";
         assert btnRadioArrivo != null : "fx:id=\"btnRadioArrivo\" was not injected: check your FXML file 'CamminoMinimoScene.fxml'.";
+        assert btnRadioStazionePartenza != null : "fx:id=\"btnRadioStazionePartenza\" was not injected: check your FXML file 'CamminoMinimoScene.fxml'.";
+        assert btnRadioStazioneArrivo != null : "fx:id=\"btnRadioStazioneArrivo\" was not injected: check your FXML file 'CamminoMinimoScene.fxml'.";
        
-        //assert colonnaTratta != null : "fx:id=\"colonnaTratta\" was not injected: check your FXML file 'CamminoMassimoScene.fxml'.";
-        //assert colonnaNome != null : "fx:id=\"colonnaNome\" was not injected: check your FXML file 'CamminoMassimoScene.fxml'.";
-        //assert colonnaLocalita != null : "fx:id=\"colonnaLocalita\" was not injected: check your FXML file 'CamminoMassimoScene.fxml'.";
-        //assert colonnaTempo != null : "fx:id=\"colonnaTempo\" was not injected: check your FXML file 'CamminoMassimoScene.fxml'.";
-        //assert tableResult != null : "fx:id=\"tableResult\" was not injected: check your FXML file 'CamminoMinimoScene.fxml'.";
+       
         
         TableColumn<TrattaTabella, String> colonnaTratta = new TableColumn<>("Tratta");
         colonnaTratta.setCellValueFactory(new PropertyValueFactory<TrattaTabella, String>("tipo"));
@@ -324,6 +329,21 @@ public class MinimoFXMLController {
     }
     
     
+    private void setAll(boolean valore) {
+    	
+    	btnRadioArrivo.setDisable(valore);
+    	btnRadioPartenza.setDisable(valore);
+    	
+    	boxImpiantoArrivo.setDisable(valore);
+    	boxImpiantoPartenza.setDisable(valore);
+    	
+    	boxLocalitaArrivo.setDisable(valore);
+    	boxLocalitaPartenza.setDisable(valore);
+    	
+    	btnRadioStazioneArrivo.setDisable(valore);
+    	btnRadioStazionePartenza.setDisable(valore);
+    }
+    
     public void setModel(Model model, Stage stage) {
     	
     	this.stage = stage;
@@ -333,57 +353,11 @@ public class MinimoFXMLController {
     	boxLivello.getItems().add(new Livello("Intermedio"));
     	boxLivello.getItems().add(new Livello("Esperto"));
     	
+    	setAll(true);
+    	
     }
     
-    
- private String convertiTempo(double tempo) {
-    	
-    	String risultato = "";
-    	
-    	int ore = (int) Math.floor(tempo/3600);
-    	
-    	if(ore > 0) {
-    		
-    		double tempoRestante = (tempo - ore*3600);
-    		int minuti = (int)Math.floor(tempoRestante/60);
-    		
-    		if(minuti > 0) {
-    			double secondi = (tempoRestante - (minuti*60));
-    			if(secondi >0) {
-    				risultato = ore + "h "+minuti+"' "+(int) secondi+"\"";
-    			}else {
-    				risultato = ore + "h "+minuti+"' ";
-    			}
-    		}else {
-    			int secondi = (int)tempoRestante;
-    			
-    			risultato = ore+"h " +secondi +"\"";
-    			
-    		}
-    		
-    		
-    	}else {
-    		int minuti = (int) Math.floor(tempo/60);
-    		
-    		if(minuti >0) {
-    			
-    			int secondi = (int)(tempo - (minuti*60));
-    			if(secondi>0) {
-    				risultato = ""+minuti+"' "+secondi+"\"";
-    			}else {
-    				risultato = ""+minuti+"' ";
-    			}
-    		}else {
-    			int secondi = (int)tempo;
-    			
-    			risultato =""+secondi +"\"";
-    			
-    		}
-    		
-    	}
-    	
-    	return risultato;
-    }
+
 }
  
     

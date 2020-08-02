@@ -10,15 +10,7 @@ public class Pista extends Tratta {
 	private int lunghezza;
 	private String localita;
 	private double tempoPercorrenza;
-	/**
-	 * @param id
-	 * @param nome
-	 * @param monte
-	 * @param valle
-	 * @param colore
-	 * @param lunghezza
-	 * @param localita
-	 */
+
 	public Pista(int id, String nome, String idMonte, String idValle, String colore, int lunghezza, String localita, String tipo) {
 		super(tipo);
 		this.id = id;

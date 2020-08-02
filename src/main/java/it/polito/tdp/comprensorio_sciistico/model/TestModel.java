@@ -24,9 +24,9 @@ public class TestModel {
 		
 		List<Livello> lista = new ArrayList<>();
 		
-		 lista.add(p);
+		// lista.add(p);
 		//lista.add(i);
-		 //lista.add(e);
+		lista.add(e);
 		
 		
 		for(Livello l: lista) {
@@ -50,8 +50,8 @@ public class TestModel {
 		*/
 		Map<String, Stazione> idMap = model.getIdMap();
 		
-		List<Tratta> best = model.trovaMassimoPercorso(e, 4, 3600, sestriere.get(0), sestriere.get(1));
-		System.out.println("PARTO: "+sestriere.get(0).getIdValle()+" "+ sestriere.get(0).getNome() +"  ARRIVO "+ sestriere.get(1).getIdValle()+ "  "+sestriere.get(1).getNome());
+		List<Tratta> best = model.trovaMassimoPercorso(e, 4, 3200, sestriere.get(7), sestriere.get(1));
+		System.out.println("PARTO: "+sestriere.get(7).getIdValle()+" "+ sestriere.get(7).getNome() +"  ARRIVO "+ sestriere.get(1).getIdValle()+ "  "+sestriere.get(1).getNome());
 		
 		double tempo = 0.0;
 		for(Tratta t: best) {
@@ -61,12 +61,12 @@ public class TestModel {
 				tempo +=((Pista)t).getTempoPercorrenza();
 			}
 			else {
-				System.out.println("Impianto: "+((Impianto)t).getId()+"   "+ ((Impianto)t).getNome() +" T: "+ (((Impianto)t).getTempoRisalita())*60) ;
-				tempo+=((Impianto)t).getTempoRisalita()*60;
+				System.out.println("Impianto: "+((Impianto)t).getId()+"   "+ ((Impianto)t).getNome() +" T: "+ (((Impianto)t).getTempoRisalita())) ;
+				tempo+=((Impianto)t).getTempoRisalita()+ (((Impianto)t).getIntervallo()*(Math.ceil(4/((Impianto)t).getPosti())))*60;
 			}
 		}
 			
-		System.out.println("TEMPO: "+ tempo +" PT: "+model.punteggioMax);
+		System.out.println("TEMPO: "+ tempo +" PT: "+model.punteggioMax+"  BEST TEMPO: "+ model.tempoBest);
 		/*
 		for(Impianto imp: model.getImpiantiIniziali("Sauze D'Oulx")) {
 			System.out.println(""+imp.getNome()+"  "+imp.getLocalita());
@@ -74,6 +74,7 @@ public class TestModel {
 		
 		
 		for(String s: model.getLocalita()) {
+		
 			
 			System.out.println("\n "+s);
 		}

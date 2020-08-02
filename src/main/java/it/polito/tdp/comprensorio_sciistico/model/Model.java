@@ -29,7 +29,6 @@ public class Model {
 	Set<String> impiantiDiscesa;
 	
 	List<Tratta> bestSoluzione;
-	//List<DefaultWeightedEdge> bestSoluzione;
 	double punteggioMax;
 	Stazione partenzaRicorsivo;
 	Stazione arrivoRicorsivo;
@@ -54,7 +53,7 @@ public class Model {
 		
 		dao.caricaStazioni(idMap);
 		Graphs.addAllVertices(this.grafo,idMap.values());
-		
+		//aggiunta impianti
 		for(Impianto i: dao.caricaImpianti()) {
 			
 			if(idMap.containsKey(i.getIdMonte()) && idMap.containsKey(i.getIdValle())) {
@@ -67,46 +66,35 @@ public class Model {
 			
 		}
 		impiantiDiscesa = dao.listaImpiantiDiscesa(mappaImpianti);
-		System.out.println("\nIMPIANTI: "+mappaImpianti.size()+"\nDiscesa: "+impiantiDiscesa.size());
 		
 		caricaPiste(livello);
-	
-		
-		
-		System.out.println("PISTE: "+ mappaPiste.size());
-		System.out.println("NUMERO VERTCI: "+ this.grafo.vertexSet().size());
-		System.out.println("NUMERO ARCHI: "+ this.grafo.edgeSet().size());
 		
 	}
 	
 	
-	public List<Tratta> camminiMinimo(Impianto inizio, Impianto fine, int numeroUtenti) {
+	public List<Tratta> camminoMinimo(String inizio, String fine, int numeroUtenti) {
 		
 		this.tempoMinimo = 0.0;
 		List<Tratta> soluzione = new ArrayList<>();
 		
-		Stazione partenza = idMap.get(inizio.getIdMonte());
-		Stazione arrivo = idMap.get(fine.getIdValle());
+		Stazione partenza = idMap.get(inizio);
+		Stazione arrivo = idMap.get(fine);
 		DijkstraShortestPath<Stazione, DefaultWeightedEdge> dij = new DijkstraShortestPath<Stazione, DefaultWeightedEdge>(this.grafo);
 
 		GraphPath<Stazione, DefaultWeightedEdge> cammino = dij.getPath(partenza, arrivo);
 		if(cammino!=null) {
-			//Aggiungo il primo impianto, perchè selezionato da input e faccio il minimo cammino dalla stazione
-			//di monte
-			soluzione.add(inizio);
-			this.tempoMinimo = inizio.getTempoRisalita() + Math.ceil(numeroUtenti/inizio.getPosti())*(inizio.getIntervallo()*60);
+		
 			for(int i = 0; i< cammino.getVertexList().size()-1; i++) {
 				
 				String chiave = cammino.getVertexList().get(i).getCodice()+"-"+cammino.getVertexList().get(i+1).getCodice();
 				
 				if(mappaPiste.containsKey(chiave)) {
-					//mi da una lista, devo vedere il prossimo vertice e scegliere la pista giusta
+					//mi da una lista, devo scegliere la prima pista in ordine decresente, perche è la piu breve in termini di tempo
 					List<Pista> lista = new ArrayList<>( mappaPiste.get(chiave));
 					Collections.sort(lista, new Comparator<Pista>() {
 	
 						@Override
 						public int compare(Pista o1, Pista o2) {
-							// TODO Auto-generated method stub
 							return -(int)(o1.getTempoPercorrenza()-o2.getTempoPercorrenza());
 						}
 						
@@ -238,24 +226,31 @@ public class Model {
 	
 	public List<Tratta> trovaMassimoPercorso(Livello livello, int numeroUtenti, int tempoMax, Impianto partenza, Impianto arrivo){
 		
-		//List<DefaultWeightedEdge> parziale = new ArrayList<>();
-		List<Tratta> parziale = new ArrayList<>();
-		partenzaRicorsivo = idMap.get(partenza.getIdValle());
-		arrivoRicorsivo = idMap.get(arrivo.getIdValle());
-		this.numeroUtenti = numeroUtenti;
 		
-		parziale.add(partenza);
-		//DefaultWeightedEdge e= this.grafo.getEdge(idMap.get(partenza.getIdValle()), idMap.get(partenza.getIdMonte()));
-		//parziale.add(e);
-				
-		bestSoluzione = new ArrayList<>();
-		punteggioMax = 0.0;
-		this.tempoMax = tempoMax;
-		double tempoIniziale=  ((partenza.getTempoRisalita())+partenza.getIntervallo()*(Math.ceil(numeroUtenti/partenza.getPosti())))*60;
-		cercaRicorsivo(parziale, tempoMax,tempoIniziale, idMap.get(partenza.getIdMonte()), livello);
+		//se esiste un cammino minimo ci proco
+		List<Tratta> camminoMinimo = this.camminoMinimo(partenza.getIdValle(), arrivo.getIdValle(), numeroUtenti);
 		
+		System.out.println("TEMPOMINIMO: "+ this.tempoMinimo+" - "+ camminoMinimo);
+		if((this.tempoMinimo <= tempoMax && camminoMinimo.size()!=0) || (partenza.equals(arrivo))) {
+			
+			List<Tratta> parziale = new ArrayList<>();
+			partenzaRicorsivo = idMap.get(partenza.getIdValle());
+			arrivoRicorsivo = idMap.get(arrivo.getIdValle());
+			this.numeroUtenti = numeroUtenti;
+			
+			parziale.add(partenza);
 		
-		return bestSoluzione;
+			bestSoluzione = new ArrayList<>();
+			punteggioMax = 0.0;
+			this.tempoMax = tempoMax;
+			double tempoIniziale=  partenza.getTempoRisalita() + (partenza.getIntervallo()*(Math.ceil(numeroUtenti/partenza.getPosti())))*60;
+			cercaRicorsivo(parziale, tempoMax,tempoIniziale, idMap.get(partenza.getIdMonte()), livello);
+			
+			
+			return bestSoluzione;
+		}else {
+			return null;
+		}
 	}
 	
 	
@@ -265,44 +260,60 @@ public class Model {
 
 		if(tempo>this.tempoMax) {
 			
-			boolean impianto=false;
-			//ultima tratta valida nel tempo
-			Tratta ultimaTratta = (parziale.get(parziale.size()-2));
-			Stazione arrivo = null;
+			List<Tratta> soluzione = new ArrayList<>(parziale);
+			boolean impianto = false;
+			
+			double tempoPercorrenza = 0.0;
+			
+			Tratta ultimaTratta = (soluzione.get(soluzione.size()-1));
 			if(ultimaTratta.getTipo().equals("Pista")) {
-				arrivo = idMap.get(((Pista)ultimaTratta).getIdValle());
+				tempoPercorrenza = tempo - ((Pista)ultimaTratta).getTempoPercorrenza();
 	
 			}else {
-				arrivo = idMap.get(((Impianto)ultimaTratta).getIdValle());
+				Impianto i =  ((Impianto)ultimaTratta);
+				tempoPercorrenza = tempo - i.getTempoRisalita() - (i.getIntervallo()*(Math.ceil(this.numeroUtenti/i.getPosti())))*60;
+			}
+			//ultima tratta valida nel tempo
+			Tratta ultimaTrattaValida = (parziale.get(parziale.size()-2));
+			
+			Stazione arrivo = null;
+			if(ultimaTrattaValida.getTipo().equals("Pista")) {
+				arrivo = idMap.get(((Pista)ultimaTrattaValida).getIdValle());		
+	
+			}else {
+				Impianto i =((Impianto)ultimaTrattaValida);
+				arrivo = idMap.get(i.getIdValle());
 				impianto = true;
+				tempoPercorrenza-= i.getTempoRisalita() - (i.getIntervallo()*(Math.ceil(this.numeroUtenti/i.getPosti())))*60;
+				
 			}
 			if(arrivo.equals(arrivoRicorsivo)) {
-								
+				//parametro per valorizzare il tempo nel calcolo del punteggio
+				double k = 0.05;
 			
-			double punteggio = calcolaPunteggio(parziale, livello);
-				//System.out.println("PUNTEGGIO "+punteggio+" A: "+arrivo.getCodice() +" AR: "+arrivoRicorsivo.getCodice());
+				double punteggio = calcolaPunteggio(soluzione, livello) + k*tempoPercorrenza;
 
 				if(punteggio>punteggioMax) {
 					
-					List<Tratta> lista = new ArrayList<>(parziale);
-					lista.remove(lista.size()-1);
-					if(impianto) {
-						lista.remove(lista.size()-1);
-					}
-					//System.out.println("ENTRA "+punteggio);
-				
-					punteggioMax = punteggio;
-					//lista.remove(lista.size()-1);
-					//System.out.println("PARTITO DA :"+((Impianto)parziale.get(0)).getIdValle());
-					//System.out.println("Arrivo:"+arrivo.getCodice()+" AR: "+arrivoRicorsivo.getCodice());
-				
 					
-					bestSoluzione = new ArrayList<>(lista);
+					//rimuovo quella non valida
+					soluzione.remove(soluzione.size()-1);
+					
+					//se la penultima è impianto tolgo
+					if(impianto) {
+						soluzione.remove(soluzione.size()-1);
+
+					}
+										
+					tempoBest = tempoPercorrenza;
+					punteggioMax = punteggio;
+									
+					bestSoluzione = new ArrayList<>(soluzione);
 					return;
 				}
-				//
+				
 			}
-			//System.out.println("Non coincide con l'arrivo");
+			
 			return;
 			
 		}else {
@@ -345,145 +356,23 @@ public class Model {
 						
 					}
 				}
-				//System.out.println("esce: "+parziale.size());
+				
 			}
-			}
+		}
 			
 		return;
 	}
 
-/*
-	
-	private void cercaRicorsivo(List<DefaultWeightedEdge> parziale, int tempoMax, double tempo, Stazione ultimaInserita, Livello livello) {
-		
-		if(tempo>tempoMax) {
-			
-			Stazione arrivo = this.grafo.getEdgeTarget(parziale.get(parziale.size()-2));
-			
-			if(arrivo.equals(arrivoRicorsivo)) {
-				double punteggio = calcolaPunti(parziale,livello);
-			}
-			
-			
-		}else {
-			
-			for(DefaultWeightedEdge e: this.grafo.outgoingEdgesOf(ultimaInserita)) {
-				parziale.add(e);
-				tempo+=this.grafo.getEdgeWeight(e);
-				cercaRicorsivo(parziale, tempoMax, tempo, this.grafo.getEdgeTarget(e), livello);
-				tempo-=this.grafo.getEdgeWeight(e);
-				//String chiave = ""+ultimaInserita.getCodice()+"-"+this.grafo.getEdgeTarget(e).getCodice();
-				parziale.remove(parziale.size()-1);
-				
-			}
-		}
-		
-	}
-	private double calcolaPunti(List<DefaultWeightedEdge> parziale, Livello livello) {
-		// TODO Auto-generated method stub
-		
-		
-		
-		Map<Pista, Integer>ripetizioni = new HashMap<>();
-		double punteggio = 0.0;
-		final int K = 3;
-		
-		for(DefaultWeightedEdge e: parziale) {
-			Stazione partenza = this.grafo.getEdgeSource(e);
-			Stazione arrivo = this.grafo.getEdgeTarget(e);
-			
-			String chiave = ""+partenza.getCodice()+"-"+arrivo.getCodice();
-			
-			if(mappaPiste.containsKey(chiave)) {
-				for(Pista pista: mappaPiste.get(chiave)) {
-					if(pista.getTempoPercorrenza()==this.grafo.getEdgeWeight(e)) {
-						if(!ripetizioni.containsKey(pista))
-							ripetizioni.put(pista, 1);
-						else {
-							
-							int rip = ripetizioni.get(pista) +1;
-							ripetizioni.put(pista, rip);
-						}
-						
-					}
-					
-				}
-				
-			}		
-		}
-		
-		switch(livello.getLivello()) {
-			
-		case "Principiante":
-			
-			//Principiante p = (Principiante)livello;
-			for(Pista pista: ripetizioni.keySet()) {
-	
-					punteggio+= (K/ripetizioni.get(pista))+(Principiante.getkBlu()*(pista.getLunghezza()/1000));
-								
-			}
-			break;
-		
-		case "Intermedio":
-			
-			//Intermedio i = (Intermedio)livello;
-			
-			for(Pista pista: ripetizioni.keySet()) {
-				
-				if(pista.getColore().equals("BLU")) {
-					
-					punteggio+= (K/ripetizioni.get(pista))+(Intermedio.getkBlu()*(pista.getLunghezza()/1000));
-					
-					
-				}else{
-					
-					punteggio+= (K/ripetizioni.get(pista))+(Intermedio.getkRossa()*(pista.getLunghezza()/1000));
-				}
-			}
-			
-			break;
-			
-		case "Esperto":
-			
-			//Esperto e = (Esperto)livello;
-			
-			for(Pista pista: ripetizioni.keySet()) {
-				
-				if(pista.getColore().equals("BLU")) {
-					
-					punteggio+= (K/ripetizioni.get(pista))+(Esperto.getkBlu()*(pista.getLunghezza()/1000));
-					
-					
-				}else if(pista.getColore().equals("ROSSA")) {
-					
-					punteggio+= (K/ripetizioni.get(pista))+(Esperto.getkRossa()*(pista.getLunghezza()/1000));
-				}else {
-					
-					punteggio+= (K/ripetizioni.get(pista))+(Esperto.getkNera()*(pista.getLunghezza()/1000));
-					
-					
-				}
-			}
-			
-			
-			break;
-			
-		}
-		
-		
-		return punteggio;
-		
-	}
-*/
+
 	private double calcolaPunteggio(List<Tratta> parziale, Livello livello) {
 		
 		Map<Pista, Integer>ripetizioni = new HashMap<>();
 		double punteggio = 0.0;
 		final int K = 3;
-		
-		for(Tratta tratta: parziale) {
-			if(tratta.getTipo().equals("Pista")) {
-				Pista pista = (Pista)tratta;
+		//fino a parziale size-1 perchè ce ancora quella non valida
+		for(int i = 0; i< parziale.size()-1; i++) {
+			if(parziale.get(i).getTipo().equals("Pista")) {
+				Pista pista = (Pista)parziale.get(i);
 				if(!ripetizioni.containsKey(pista))
 					ripetizioni.put(pista, 1);
 				else {
@@ -491,8 +380,6 @@ public class Model {
 					int rip = ripetizioni.get(pista) +1;
 					ripetizioni.put(pista, rip);
 				}
-					
-				
 			}
 		}
 		
@@ -500,25 +387,18 @@ public class Model {
 			
 		case "Principiante":
 			
-			//Principiante p = (Principiante)livello;
 			for(Pista pista: ripetizioni.keySet()) {
-	
-					punteggio+= (K/ripetizioni.get(pista))+(Principiante.getkBlu()*(pista.getLunghezza()/1000));
-								
+					punteggio+= (K/ripetizioni.get(pista))+(Principiante.getkBlu()*(pista.getLunghezza()/1000));					
 			}
 			break;
 		
 		case "Intermedio":
 			
-			//Intermedio i = (Intermedio)livello;
-			
 			for(Pista pista: ripetizioni.keySet()) {
-				
 				if(pista.getColore().equals("BLU")) {
 					
-					punteggio+= (K/ripetizioni.get(pista))+(Intermedio.getkBlu()*(pista.getLunghezza()/1000));
-					
-					
+					punteggio+= ((K-1)/ripetizioni.get(pista))+(Intermedio.getkBlu()*(pista.getLunghezza()/1000));
+	
 				}else{
 					
 					punteggio+= (K/ripetizioni.get(pista))+(Intermedio.getkRossa()*(pista.getLunghezza()/1000));
@@ -529,81 +409,25 @@ public class Model {
 			
 		case "Esperto":
 			
-			//Esperto e = (Esperto)livello;
-			
 			for(Pista pista: ripetizioni.keySet()) {
-				
 				if(pista.getColore().equals("BLU")) {
-					
-					punteggio+= (K/ripetizioni.get(pista))+(Esperto.getkBlu()*(pista.getLunghezza()/1000));
-					
+					punteggio+= ((K-2)/ripetizioni.get(pista))+(Esperto.getkBlu()*(pista.getLunghezza()/1000));
 					
 				}else if(pista.getColore().equals("ROSSA")) {
-					
-					punteggio+= (K/ripetizioni.get(pista))+(Esperto.getkRossa()*(pista.getLunghezza()/1000));
+					punteggio+= ((K-1)/ripetizioni.get(pista))+(Esperto.getkRossa()*(pista.getLunghezza()/1000));
+				
 				}else {
-					
 					punteggio+= (K/ripetizioni.get(pista))+(Esperto.getkNera()*(pista.getLunghezza()/1000));
-					
-					
+				
 				}
 			}
 			
-			
-			break;
-			
+			break;	
 		}
-		
-		
+				
 		return punteggio;
 	}
 
-	public String stampa() {
-		
-		String result="";
-		int contaP = 0;
-		int imp=0;
-		for(DefaultWeightedEdge e: this.grafo.edgeSet()) {
-		
-			if(this.grafo.getEdgeSource(e).getQuota()<this.grafo.getEdgeTarget(e).getQuota()) {
-				
-				result+="\nImpianto con peso: " + this.grafo.getEdgeWeight(e) ; 
-				imp++;
-			}else {
-				String chiave = this.grafo.getEdgeSource(e).getCodice()+"-"+this.grafo.getEdgeTarget(e).getCodice();
-				
-				if(impiantiDiscesa.contains(chiave)) {
-					imp++;
-				}else {
-				
-					result+="\nPista con peso: " + this.grafo.getEdgeWeight(e)+ "("+this.grafo.getEdgeSource(e).getCodice()+"-"+this.grafo.getEdgeTarget(e).getCodice(); 
-					contaP++;
-				}
-			}
-		}
-		System.out.println("CONTA: "+contaP+" IMP:"+imp+"  "+ this.grafo.edgeSet().size());
-		return result;
-	}
-	
-	public String stampaPiste() {
-		
-		String r = "";
-		int cont = 0;
-		for(List<Pista> list: mappaPiste.values()) {
-			cont++;
-			r+="\nGruppo "+cont+" ("+list.get(0).getIdMonte()+"-"+list.get(0).getIdValle()+"):";
-			for(Pista p: list) {
-				
-				r+="\n"+p.getNome()+"("+p.getColore()+")";
-			}
-			r+="\n";
-			
-		}
-		
-		return r;
-	}
-	
-	
 	public List<Impianto> getImpiantiIniziali(String localita){
 		
 		List<Impianto> lista = new ArrayList<>();
@@ -618,7 +442,7 @@ public class Model {
 
 			@Override
 			public int compare(Impianto o1, Impianto o2) {
-				// TODO Auto-generated method stub
+				
 				return o1.getNome().compareTo(o2.getNome());
 			}	
 		});
@@ -628,10 +452,8 @@ public class Model {
 	}
 	
 	public List<Impianto> getImpiantiPerLocalita(String localita){
-		
-		
-List<Impianto> lista = new ArrayList<>();
-		
+
+		List<Impianto> lista = new ArrayList<>();		
 		for(Impianto i: mappaImpianti.values()) {
 			if(i.getLocalita().equals(localita)) {
 				lista.add(i);
@@ -642,7 +464,6 @@ List<Impianto> lista = new ArrayList<>();
 
 			@Override
 			public int compare(Impianto o1, Impianto o2) {
-				// TODO Auto-generated method stub
 				return o1.getNome().compareTo(o2.getNome());
 			}	
 		});
@@ -662,16 +483,66 @@ List<Impianto> lista = new ArrayList<>();
 		return localita;
 	}
 
-	//----------------------------------------------------------------------------------------------------
 	public Map<String, Stazione> getIdMap() {
 		return idMap;
 	}
+	
+	public String convertiTempoInStringa(double tempo) {
+	    	
+	    	String risultato = "";
+	    	
+	    	int ore = (int) Math.floor(tempo/3600);
+	    	
+	    	if(ore > 0) {
+	    		
+	    		double tempoRestante = (tempo - ore*3600);
+	    		int minuti = (int)Math.floor(tempoRestante/60);
+	    		
+	    		if(minuti > 0) {
+	    			double secondi = (tempoRestante - (minuti*60));
+	    			if(secondi >0) {
+	    				risultato = ore + "h "+minuti+"' "+(int) secondi+"\"";
+	    			}else {
+	    				risultato = ore + "h "+minuti+"' ";
+	    			}
+	    		}else {
+	    			int secondi = (int)tempoRestante;
+	    			
+	    			risultato = ore+"h " +secondi +"\"";
+	    			
+	    		}
+	    		
+	    		
+	    	}else {
+	    		int minuti = (int) Math.floor(tempo/60);
+	    		
+	    		if(minuti >0) {
+	    			
+	    			int secondi = (int)(tempo - (minuti*60));
+	    			if(secondi>0) {
+	    				risultato = ""+minuti+"' "+secondi+"\"";
+	    			}else {
+	    				risultato = ""+minuti+"' ";
+	    			}
+	    		}else {
+	    			int secondi = (int)tempo;
+	    			
+	    			risultato =""+secondi +"\"";
+	    			
+	    		}
+	    		
+	    	}
+	    	
+	    	return risultato;
+	    }
 
+	public double getTempoBest() {
+		return tempoBest;
+	}
+	
 	public double getTempoMinimo() {
 		return tempoMinimo;
 	}
-	
-	
 	
 	
 

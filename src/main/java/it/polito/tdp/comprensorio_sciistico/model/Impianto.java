@@ -16,20 +16,7 @@ public class Impianto extends Tratta{
 	private double intervallo;
 	private LocalTime oraApertura;
 	private LocalTime oraChiusura;
-	/**
-	 * @param id
-	 * @param nome
-	 * @param stazioneMonte
-	 * @param stazioneValle
-	 * @param localita
-	 * @param tipologia
-	 * @param iniziale
-	 * @param posti
-	 * @param tempoRisalita
-	 * @param intervallo
-	 * @param oraApertura
-	 * @param oraChiusura
-	 */
+
 	public Impianto(int id, String nome, String idMonte, String idValle, String localita,
 			String tipologia, boolean iniziale, int posti, double tempoRisalita, double intervallo,
 			LocalTime oraApertura, LocalTime oraChiusura,String tipo) {
@@ -87,8 +74,6 @@ public class Impianto extends Tratta{
 	public String toString() {
 		return ""+ nome  + " (" + tipologia+")";
 	}
-	
-	
 	
 
 	
