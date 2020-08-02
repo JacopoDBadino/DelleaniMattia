@@ -14,5 +14,5 @@
 5) Avviare l'applicazione lanciando la classe <i>Main</i>
 
 
-È possibile vedere il video dimostrativo per il corretto funzionamento dell'applicazione al seguente link:  
+È possibile vedere il video dimostrativo per il corretto funzionamento dell'applicazione al seguente link:  https://youtu.be/AFToEzgNM9k
 
