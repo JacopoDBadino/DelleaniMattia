@@ -21,22 +21,22 @@ import it.polito.tdp.comprensorio_sciistico.db.ComprensorioDAO;
 
 public class Model {
 	
-	Graph<Stazione, DefaultWeightedEdge> grafo;
-	ComprensorioDAO dao;
-	Map<String, Stazione> idMap;
-	Map<String, Impianto> mappaImpianti;
-	Map<String, List<Pista>> mappaPiste;
-	Set<String> impiantiDiscesa;
+	private Graph<Stazione, DefaultWeightedEdge> grafo;
+	private ComprensorioDAO dao;
+	private Map<String, Stazione> idMap;
+	private Map<String, Impianto> mappaImpianti;
+	private Map<String, List<Pista>> mappaPiste;
+	@SuppressWarnings("unused")
+	private Set<String> impiantiDiscesa;
 	
-	List<Tratta> bestSoluzione;
-	double punteggioMax;
-	Stazione partenzaRicorsivo;
-	Stazione arrivoRicorsivo;
-	int numeroUtenti;
-	double tempoMax;
-	public double tempoBest;
+	private List<Tratta> bestSoluzione;
+	private double punteggioMax;
+	private Stazione arrivoRicorsivo;
+	private int numeroUtenti;
+	private double tempoMax;
+	private double tempoBest;
 	
-	double tempoMinimo;
+	private double tempoMinimo;
 	
 	
 	public Model() {
@@ -227,14 +227,13 @@ public class Model {
 	public List<Tratta> trovaMassimoPercorso(Livello livello, int numeroUtenti, int tempoMax, Impianto partenza, Impianto arrivo){
 		
 		
-		//se esiste un cammino minimo ci proco
+		//se esiste un cammino minimo procedo
 		List<Tratta> camminoMinimo = this.camminoMinimo(partenza.getIdValle(), arrivo.getIdValle(), numeroUtenti);
 		
-		System.out.println("TEMPOMINIMO: "+ this.tempoMinimo+" - "+ camminoMinimo);
 		if((this.tempoMinimo <= tempoMax && camminoMinimo.size()!=0) || (partenza.equals(arrivo))) {
 			
 			List<Tratta> parziale = new ArrayList<>();
-			partenzaRicorsivo = idMap.get(partenza.getIdValle());
+			
 			arrivoRicorsivo = idMap.get(arrivo.getIdValle());
 			this.numeroUtenti = numeroUtenti;
 			
@@ -243,6 +242,7 @@ public class Model {
 			bestSoluzione = new ArrayList<>();
 			punteggioMax = 0.0;
 			this.tempoMax = tempoMax;
+			//come ultima inserita metto la stazione di monte dell'impianto di partenza
 			double tempoIniziale=  partenza.getTempoRisalita() + (partenza.getIntervallo()*(Math.ceil(numeroUtenti/partenza.getPosti())))*60;
 			cercaRicorsivo(parziale, tempoMax,tempoIniziale, idMap.get(partenza.getIdMonte()), livello);
 			

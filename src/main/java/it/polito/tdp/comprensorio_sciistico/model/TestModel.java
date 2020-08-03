@@ -66,7 +66,7 @@ public class TestModel {
 			}
 		}
 			
-		System.out.println("TEMPO: "+ tempo +" PT: "+model.punteggioMax+"  BEST TEMPO: "+ model.tempoBest);
+		//System.out.println("TEMPO: "+ tempo +" PT: "+model.punteggioMax+"  BEST TEMPO: "+ model.tempoBest);
 		/*
 		for(Impianto imp: model.getImpiantiIniziali("Sauze D'Oulx")) {
 			System.out.println(""+imp.getNome()+"  "+imp.getLocalita());
